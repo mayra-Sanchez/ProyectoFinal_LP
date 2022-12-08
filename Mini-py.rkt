@@ -15,13 +15,13 @@
   '((espacio-blanco (whitespace) skip)
     (comentario ("#" (arbno (or digit letter #\newline whitespace))) skip)  ;Los comentarios inician con #
     (letter("'" letter "'") symbol)
-    (identificador ( letter (arbno (or letter digit))) symbol) ;Con letter se identifica que puede iniciar con mayuscula o minuscula 
+    (identificador ("$" letter (arbno (or letter digit))) symbol) ;Con letter se identifica que puede iniciar con mayuscula o minuscula 
     (numero (digit (arbno digit)) number)
     (numero ("-" digit (arbno digit)) number)
     (numero (digit (arbno digit) "." digit (arbno digit)) number)
     (numero ("-" digit (arbno digit) "." digit (arbno digit)) number)
-    (bool (or "true" "false") boolean)
-    (texto (letter (arbno (or letter ":" "?" "=" "'" "#" "$" "&" "." "," ";" "*" "!" "¡" "¿" "-" "_"))) string)))
+    (bool (or "@true" "@false") boolean)
+    (texto (letter (arbno (or letter ":" "?" "=" "'" "&" "." "," ";" "*" "!" "¡" "¿" "-" "_"))) string)))
 
 ; Gramatica
 ;Esta es la gramatica del lenguaje, la cual describe las reglas del mismo
@@ -46,14 +46,14 @@
                 rec-exp)
   ;Datos
   (expresion (numero) numero-lit)
-  (expresion (" " "" texto " " "") cadena-lit)
+  (expresion ("\"" texto "\"") cadena-lit)
   (expresion (bool) bool-lit)
   
   ;Constructores de datos predefinidos:
 
   (expresion ("[" (separated-list expresion ";") "]") list-exp)
   (expresion ("tupla" "[" (separated-list expresion ";") "]") tupla-exp) ;preguntar
-  (expresion ("{" (identificador "=" expresion (arbno ";" identificador "=" expresion))) registro-exp) ;preguntar
+  (expresion ("{" (identificador "=" expresion (arbno ";" identificador "=" expresion)) "}") registro-exp) ;preguntar
 
   (expr-bool (pred-prim "(" expresion "," expresion ")") pred-exp)
   (expr-bool (oper-bin-bool "(" expr-bool "," expr-bool ")") oper-bin-exp)
@@ -68,11 +68,12 @@
   (expresion ("for" identificador "=" expresion (or "to" "downto") expresion "do" expresion "done") for-exp)
 
   ;Otros
-  (expresion ("procedimiento" "(" (separated-list identificador ",") ")" "haga" expresion "finProc") proc-exp)
-  (expresion ("evaluar" expresion "(" (separated-list expresion ",") ")" "finEval") app-exp)
+  (expresion ("def" "(" (separated-list identificador ",") ")" "{" expresion "}") def-exp) ;Crear procedimiento
+  (expresion ("eval" expresion "(" (separated-list expresion ",") ")") app-exp) ;invocar procedimientos
   (expresion ("(" expresion primitiva-bin expresion ")") primapp-bin-exp)
   (expresion (primitiva-un "(" expresion ")") primapp-un-exp)
-  (expresion ("declarar" "(" (separated-list identificador "=" expresion ";") ")" "{" expresion "}" ) variableLocal-exp)
+  (expresion ("def-rec" (arbno identificador "(" (separated-list identificador ",") ")" "=" expresion)  "in" expresion)
+             defrec-exp)
 
 ;--------------------------------------Enteros------------------------------------------------------------------------------
   ; Primitiva binaria 
