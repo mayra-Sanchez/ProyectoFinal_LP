@@ -20,7 +20,6 @@
     (numero ("-" digit (arbno digit)) number)
     (numero (digit (arbno digit) "." digit (arbno digit)) number)
     (numero ("-" digit (arbno digit) "." digit (arbno digit)) number)
-    (bool (or "@true" "@false") boolean)
     (texto (letter (arbno (or letter ":" "?" "=" "'" "&" "." "," ";" "*" "!" "¡" "¿" "-" "_"))) string)))
 
 ; Gramatica
@@ -48,6 +47,8 @@
   (expresion (numero) numero-lit)
   (expresion ("\"" texto "\"") cadena-lit)
   (expresion (bool) bool-lit)
+  (bool ("true") true-exp)
+  (bool ("false") false-exp)
   
   ;Constructores de datos predefinidos:
 
@@ -103,6 +104,7 @@
   (pred-prim ("<=") menor_igual)
   (pred-prim (">=") mayor_igual)
   (pred-prim ("==") igual)
+  (pred-prim ("<>") mayorNomenor)
 
   (oper-bin-bool ("and") and-op)
   (oper-bin-bool ("or") or-op)
@@ -118,16 +120,19 @@
   (primitiva-un ("vacio") primitiva-vacio)
   (primitiva-un ("cabeza") primitiva-cabeza)
   (primitiva-un ("cola") primitiva-cola)
+  
 ;---------------------------------------Listas-----------------------------------------------------------------------------------
   (primitiva-un ("crear-lista") primitiva-crear-lista)
   (primitiva-un ("lista?") primitiva-lista)
   (primitiva-bin ("append") primitiva-append)
   (primitiva-un ("ref-list") primitiva-refList)
   (primitiva-bin ("set-list") primitiva-setList)
+  
 ;------------------------------------Tuplas---------------------------------------------------------------------------------------
   (primitiva-un ("crear-tupla") primitiva-crear-tupla)
   (primitiva-un ("tupla?") primitiva-tupla?)
   (primitiva-bin ("ref-tuple") primitiva-refTuple)
+  
 ;-----------------------------------Registros---------------------------------------------------------------------------------------
   (primitiva-un ("registros?") primitiva-registros?)
   (primitiva-un ("crear-resgistro") primitiva-crearRegistro)
@@ -161,5 +166,3 @@
     (sllgen:make-stream-parser 
       especificacion-lexica
       gramatica)))
-
-  
