@@ -5,7 +5,7 @@
 ; Santiago Casañas Tabares - 2025301
 ; Jesus Adrian Peña - 2025513
 
-; URL github: https://github.com/mayra-Sanchez/interpretador.git
+; URL github: https://github.com/mayra-Sanchez/ProyectoFinal_LP
 
 ;----------------------------------- INTERPRETADOR ----------------------------------
 ; Especificacion lexica
