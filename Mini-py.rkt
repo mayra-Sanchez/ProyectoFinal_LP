@@ -41,6 +41,7 @@
   (expresion ("def" "(" (separated-list identificador ",") ")" "{" expresion "}") proc-exp)
   (expresion ("eval" expresion "[" (separated-list expresion ",") "]") app-exp)
   (expresion ("def-rec" (arbno identificador "(" (separated-list identificador ",") ")" "=" expresion)  "in" expresion) defrec-exp)
+  (expresion ("while" boolean  "do" expresion "done") while-exp)
   
   ; paso por valor y referencia 
   (expresion ("begin" expresion (arbno ";" expresion) "end")
@@ -63,7 +64,7 @@
 
   ;Booleanos
   (boolean (bool) trueFalse-exp)
-  (expresion (pred-prim "(" expresion "," expresion ")") comparacion-exp)
+  (boolean (pred-prim "(" expresion "," expresion ")") comparacion-exp)
   (boolean (oper-bin-bool "(" boolean "," boolean ")") op-log-exp)
   (boolean (oper-un-bool "(" boolean ")")  oper-un-bool-exp)
 
@@ -236,12 +237,13 @@
 
      (expr-bool (bool) (eval-bool bool amb))
 
-     (comparacion-exp ( prim exp1 exp2)
-                      (apply-comparacion-exp prim exp1 exp2  amb))
      (string-exp (exp)
                  (cases prim-string exp
                    (concat-exp (exp1 exp2) (string-append (evaluar-expresion exp1 amb ) (evaluar-expresion exp2 amb )))
                    (longitud-exp (exp) (string-length (evaluar-expresion exp amb )))))
+
+      (while-exp (exp-bool body)
+                 (eval-while-exp exp-bool body amb ))
 
       )))
 ;-----------Eval-bool------------------
@@ -254,9 +256,22 @@
                   (apply-oplog-exp op-log bool1 bool2 amb ))
       (oper-un-bool-exp (un prim)
                         (apply-un-exp un (eval-bool prim amb)))
+      (comparacion-exp ( prim exp1 exp2)
+                      (apply-comparacion-exp prim exp1 exp2  amb))
       )
     )
   )
+;------------Eval-while --------------------------
+(define eval-while-exp
+  (lambda (exp-bool body amb )
+      (let
+          ((condicion (evaluar-expresion (expr-bool exp-bool) amb )))
+                        
+        (if condicion
+            (begin
+              (evaluar-expresion body amb )
+              (eval-while-exp expr-bool body amb ))
+            1))))
 ;                                                               ----------------------------------- LISTAS ----------------------------------
 ;funcion auxiliar para obtener elemento en una posicion de una lista
 (define get-position-list
@@ -621,5 +636,3 @@
 (define valor-verdad?
   (lambda (x)
     (not (zero? x))))
-
-
