@@ -34,8 +34,8 @@
   (expresion ("\"" texto "\"") texto-lit)
   (expresion (identificador) id-exp)
   (expresion (boolean) expr-bool)
-  (expresion ("(" expresion primitiva-bin expresion ")") primapp-bin-exp)
-  (expresion (primitiva-un "(" expresion ")") primapp-un-exp)
+  (expresion ("(" expresion primitiva-bin-entero expresion ")") primapp-bin-exp)
+  (expresion (primitiva-un-entero "(" expresion ")") primapp-un-exp)
   (expresion ("declarar" "(" (separated-list identificador "=" expresion ";") ")" "{" expresion "}" ) variableLocal-exp)
   (expresion ("if" expresion "then" expresion "[" "else" expresion "]" "end") condicional-exp)
   (expresion ("def" "(" (separated-list identificador ",") ")" "{" expresion "}") proc-exp)
@@ -57,6 +57,9 @@
   (expresion (prim-lista "(" (separated-list expresion ",") ")") lista-exp)
   (expresion ("set-lista(" expresion "," expresion "," expresion ")") set-list)
   (expresion ("ref-lista(" expresion "," expresion ")") ref-list)
+
+  ;String
+  (expresion (prim-string) string-exp)
 
   ;Booleanos
   (boolean (bool) trueFalse-exp)
@@ -91,17 +94,20 @@
   (prim-lista ("vacio?") null?-prim)
   (prim-lista ("lista?") list?-prim)
 
-  ;Primitiva binaria
-  (primitiva-bin ("+") primitiva-suma)
-  (primitiva-bin ("~") primitiva-resta)
-  (primitiva-bin ("/") primitiva-div)
-  (primitiva-bin ("*") primitiva-multi)
-  (primitiva-bin ("concat") primitiva-concat)
+ ;Primitiva binaria
+  (primitiva-bin-entero ("+") primitiva-suma)
+  (primitiva-bin-entero ("-") primitiva-resta)
+  (primitiva-bin-entero ("/") primitiva-div)
+  (primitiva-bin-entero ("*") primitiva-multi)
+  (primitiva-bin-entero ("%") primitiva-mod)
 
-    ; Primitiva unaria
-  (primitiva-un ("longitud") primitiva-longitud)
-  (primitiva-un ("add1") primitiva-add1)
-  (primitiva-un ("sub1") primitiva-sub1)
+  ; Primitiva unaria
+  (primitiva-un-entero ("++") primitiva-add1)
+  (primitiva-un-entero ("--") primitiva-sub1)
+
+  ;Primitiva string
+  (prim-string ("concat" "(" expresion "," expresion ")") concat-exp)
+  (prim-string ("longitud" "(" expresion ")") longitud-exp)
   
 ))
 ;                                                               ----------------------------------- INTERPRETADOR ----------------------------------
@@ -211,8 +217,6 @@
                          (evaluar-expresion body (extend-amb ids args amb))))
                    ))
                )
-
-      
       
       (set-exp (id rhs-exp)
                (begin
@@ -234,6 +238,10 @@
 
      (comparacion-exp ( prim exp1 exp2)
                       (apply-comparacion-exp prim exp1 exp2  amb))
+     (string-exp (exp)
+                 (cases prim-string exp
+                   (concat-exp (exp1 exp2) (string-append (evaluar-expresion exp1 amb ) (evaluar-expresion exp2 amb )))
+                   (longitud-exp (exp) (string-length (evaluar-expresion exp amb )))))
 
       )))
 ;-----------Eval-bool------------------
@@ -387,20 +395,20 @@
 ;notacion infija, y la concatenacion de dos expresiones
 (define apply-prim-bin
   (lambda (exp1 prim exp2 amb)
-    (cases primitiva-bin prim
+    (cases primitiva-bin-entero prim
       (primitiva-suma () (+ (evaluar-expresion exp1 amb) (evaluar-expresion exp2 amb)))
       (primitiva-resta () (- (evaluar-expresion exp1 amb) (evaluar-expresion exp2 amb)))
       (primitiva-multi () (* (evaluar-expresion exp1 amb) (evaluar-expresion exp2 amb)))
       (primitiva-div () (/ (evaluar-expresion exp1 amb) (evaluar-expresion exp2 amb)))
-      (primitiva-concat () (string-append (evaluar-expresion exp1 amb) (evaluar-expresion exp2 amb))))))
+      (primitiva-mod () (modulo (evaluar-expresion exp1 amb) (evaluar-expresion exp2 amb)))
+      )))
 
 ;apply-prim-un
 ;Realiza la especificacion de aplicación de las primitivas unarias
 ;Empleada para conocer la longitud de una expresion, ademas de sumar y restar una unidad a un numero definido
 (define apply-prim-un
   (lambda (prim arg amb)
-    (cases primitiva-un prim
-      (primitiva-longitud () (string-length(evaluar-expresion arg amb)))
+    (cases primitiva-un-entero prim
       (primitiva-add1 () (+ (evaluar-expresion arg amb ) 1))
       (primitiva-sub1 () (- (evaluar-expresion arg amb ) 1)))))
 
