@@ -101,6 +101,11 @@
   ;Primitiva tuplas crear-tupla, tupla?
   (primitiv-tupla ("crear-tupla") primitiva-crear-tupla)
   (primitiv-tupla ("tupla?") primitiva-?tupla)
+  (primitiv-tupla ("tvacio") primitiva-tvacio)
+  (primitiv-tupla ("tvacio?") primitiva-?tvacio)
+  (primitiv-tupla ("tcabeza") primitiva-tcabeza)
+  (primitiv-tupla ("tcola") primitiva-tcola)
+  
 
  ;Primitiva binaria
   (primitiva-bin-entero ("+") primitiva-suma)
@@ -515,6 +520,10 @@
     (cases primitiv-tupla prim-tupla
       (primitiva-crear-tupla () args) ;pair
       (primitiva-?tupla () (pair? args))
+      (primitiva-tvacio () ("tupla[]"))
+      (primitiva-?tvacio () (if (null? args) #t #f))
+      (primitiva-tcabeza () (car args))
+      (primitiva-tcola () (cdr args))
       )))
 ;                                                               ----------------------------------- AMBIENTES ----------------------------------
 ; ---------------Ambiente inicial-------------------------
