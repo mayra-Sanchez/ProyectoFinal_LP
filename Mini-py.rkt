@@ -41,6 +41,7 @@
   (expresion ("def" "(" (separated-list identificador ",") ")" "{" expresion "}") proc-exp)
   (expresion ("eval" expresion "[" (separated-list expresion ",") "]") app-exp)
   (expresion ("def-rec" (arbno identificador "(" (separated-list identificador ",") ")" "=" expresion)  "in" expresion) defrec-exp)
+  (expresion ("rec" (arbno identificador "(" (separated-list identificador ",") ")" "=" expresion)  "in" expresion) rec-exp)
   
   ; paso por valor y referencia 
   (expresion ("begin" expresion (arbno ";" expresion) "end")
@@ -57,6 +58,9 @@
   (expresion (prim-lista "(" (separated-list expresion ",") ")") lista-exp)
   (expresion ("set-lista(" expresion "," expresion "," expresion ")") set-list)
   (expresion ("ref-lista(" expresion "," expresion ")") ref-list)
+  (expresion (primitiv-tupla "tupla" "[" (separated-list expresion ";") "]") tupla-exp)
+  (expresion ("ref-tupla(" expresion "," expresion ")") ref-tupla)
+  
 
   ;Booleanos
   (boolean (bool) trueFalse-exp)
@@ -90,6 +94,10 @@
   (prim-lista ("cola")  cdr-prim)
   (prim-lista ("vacio?") null?-prim)
   (prim-lista ("lista?") list?-prim)
+
+  ;Primitiva tuplas crear-tupla, tupla?
+  (primitiv-tupla ("crear-tupla") primitiva-crear-tupla)
+  (primitiv-tupla ("tupla?") primitiva-?tupla)
 
   ;Primitiva binaria
   (primitiva-bin ("+") primitiva-suma)
@@ -169,6 +177,13 @@
       (ref-list (lista pos)
                 (let ((lista (evaluar-expresion lista amb)))
                   (get-position-list lista (evaluar-expresion pos amb))))
+
+      (tupla-exp (prim rands)
+                 (let ((args(eval-rands-list rands amb)))
+                 (apply-prim-tupla prim args)))
+      (ref-tupla (tupla pos)
+                 (let ((tupla (evaluar-expresion tupla amb)))
+                   (get-position-list tupla (evaluar-expresion pos amb))))
       
       (variableLocal-exp (ids exps cuerpo)
                          (let ((args (eval-let-exp-rands exps amb)))
@@ -196,6 +211,10 @@
       (defrec-exp (proc-names idss bodies letrec-body)
                   (evaluar-expresion letrec-body
                                    (extend-amb-recursively proc-names idss bodies amb)))
+
+      (rec-exp (proc-names idss bodies letrec-body)
+               (evaluar-expresion letrec-body
+                                  (extend-amb-recursively proc-names idss bodies amb)))
       
       (var-exp (ids rands body)
                (let ((args (eval-let-exp-rands rands amb)))
@@ -273,6 +292,8 @@
       (new-list lista n x 0))
     )
   )
+
+
 ;                                                               ----------------------------------- REFERENCIAS ----------------------------------
 
 ;Definición de tipos para trabajar referencias
@@ -460,6 +481,14 @@
       (append-prim () (cons (car args) (cadr args)))
       (null?-prim () (if (null? (car args)) 1 0))
       (list?-prim () (list? (car args)))
+      )))
+
+;--- TUPLAS ---
+(define apply-prim-tupla
+  (lambda (prim-tupla args)
+    (cases primitiv-tupla prim-tupla
+      (primitiva-crear-tupla () args) ;pair
+      (primitiva-?tupla () (pair? args))
       )))
 ;                                                               ----------------------------------- AMBIENTES ----------------------------------
 ; ---------------Ambiente inicial-------------------------
