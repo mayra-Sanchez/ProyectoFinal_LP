@@ -59,6 +59,8 @@
   (expresion (prim-lista "(" (separated-list expresion ",") ")") lista-exp)
   (expresion ("set-lista(" expresion "," expresion "," expresion ")") set-list)
   (expresion ("ref-lista(" expresion "," expresion ")") ref-list)
+  (expresion (primitiv-tupla "tupla" "[" (separated-list expresion ";") "]") tupla-exp)
+  (expresion ("ref-tuple(" expresion "," expresion ")") ref-tupla)
 
   ;String
   (expresion (prim-string) string-exp)
@@ -95,6 +97,10 @@
   (prim-lista ("cola")  cdr-prim)
   (prim-lista ("vacio?") null?-prim)
   (prim-lista ("lista?") list?-prim)
+
+  ;Primitiva tuplas crear-tupla, tupla?
+  (primitiv-tupla ("crear-tupla") primitiva-crear-tupla)
+  (primitiv-tupla ("tupla?") primitiva-?tupla)
 
  ;Primitiva binaria
   (primitiva-bin-entero ("+") primitiva-suma)
@@ -177,6 +183,14 @@
       (ref-list (lista pos)
                 (let ((lista (evaluar-expresion lista amb)))
                   (get-position-list lista (evaluar-expresion pos amb))))
+
+      (tupla-exp (prim rands)
+                 (let ((args(eval-rands-list rands amb)))
+                 (apply-prim-tupla prim args)))
+      
+      (ref-tupla (tupla pos)
+                 (let ((tupla (evaluar-expresion tupla amb)))
+                   (get-position-list tupla (evaluar-expresion pos amb))))
       
       (variableLocal-exp (ids exps cuerpo)
                          (let ((args (eval-let-exp-rands exps amb)))
@@ -494,6 +508,14 @@
       (null?-prim () (if (null? (car args)) 1 0))
       (list?-prim () (list? (car args)))
       )))
+
+;-------------- Tuplas ---------------
+(define apply-prim-tupla
+  (lambda (prim-tupla args)
+    (cases primitiv-tupla prim-tupla
+      (primitiva-crear-tupla () args) ;pair
+      (primitiva-?tupla () (pair? args))
+      )))
 ;                                                               ----------------------------------- AMBIENTES ----------------------------------
 ; ---------------Ambiente inicial-------------------------
 ; Es una funcion cuyo dominio es un conjunto finito de variables y cuyo rango es el conjunto de todos los valores de Scheme, es usado usado para asociar las variables con sus valores en la implementacion
@@ -646,5 +668,3 @@
 (define valor-verdad?
   (lambda (x)
     (not (zero? x))))
-
-
