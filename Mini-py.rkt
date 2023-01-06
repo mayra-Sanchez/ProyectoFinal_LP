@@ -42,6 +42,7 @@
   (expresion ("eval" expresion "[" (separated-list expresion ",") "]") app-exp)
   (expresion ("def-rec" (arbno identificador "(" (separated-list identificador ",") ")" "=" expresion)  "in" expresion) defrec-exp)
   (expresion ("while" boolean  "do" expresion "done") while-exp)
+  (expresion ("for" "to" identificador "=" expresion "downto"  expresion "do" expresion "done") for-exp)
   
   ; paso por valor y referencia 
   (expresion ("begin" expresion (arbno ";" expresion) "end")
@@ -244,6 +245,15 @@
 
       (while-exp (exp-bool body)
                  (eval-while-exp exp-bool body amb ))
+
+      (for-exp ( ids desde hasta cuerpo)
+         (let
+             ((to (evaluar-expresion desde amb))
+                   (downto (evaluar-expresion hasta amb)))
+            (let   loop ((i to))
+                   (when (< i downto)
+                      (evaluar-expresion cuerpo (extend-amb (list ids) (list i) amb))
+                      (loop (+ 1 i))))))
 
       )))
 ;-----------Eval-bool------------------
@@ -636,3 +646,5 @@
 (define valor-verdad?
   (lambda (x)
     (not (zero? x))))
+
+
