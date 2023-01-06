@@ -36,8 +36,13 @@
   (cuerpo (expresion (arbno expresion)) cuerpoc)
 
   ;Expresiones
+
+  ;datos
   (expresion (numero) numero-lit)
   (expresion ("\"" texto "\"") texto-lit)
+  (expresion (crea-bignum "(" (arbno numero) ")") bignum-exp)
+  
+  
   (expresion (identificador) id-exp)
   (expresion ("(" expresion primitiva-bin expresion ")") primapp-bin-exp)
   (expresion (primitiva-un "(" expresion ")") primapp-un-exp)
@@ -69,6 +74,23 @@
   (primitiva-bin ("/") primitiva-div)
   (primitiva-bin ("*") primitiva-multi)
   (primitiva-bin ("concat") primitiva-concat)
+
+  
+
+  ;manejo primitivas bignum
+  (expresion (primbin-bignum "(" expresion "," "(" (arbno numero) ")" ")") controlbin-bignum)
+  (expresion (primun-bignum "(" expresion ")" ) controlun-bignum)
+  
+  ;Primitivas bignum
+  (crea-bignum ("x8") octa-exp)
+  (crea-bignum ("x16") hexa-exp)
+  (crea-bignum ("x32") triges-exp)
+  (primbin-bignum ("sum-bignum") sum-bignum)
+  (primbin-bignum ("sub-bignum") sub-bignum)
+  (primbin-bignum ("mult-bignum") mult-bignum)
+  (primbin-bignum ("pot-bignum") pot-bignum)
+  (primun-bignum ("succes") succes)
+  (primun-bignum ("predes") predes)
 
   ;Primitiva listas
   (prim-lista ("crear-lista") crea-list-prim)
@@ -221,6 +243,13 @@
       (id-exp (id) (apply-env amb id))
 
       (texto-lit (texto) texto)
+
+      (bignum-exp (exponente numeros) numeros)
+
+      (controlbin-bignum (operador rands1 rands2) (apply-prim-bin-bignum operador (get-Bignum-estruct rands1)
+                                                                         rands1  rands2 amb))
+
+      (controlun-bignum (operador bignums) (apply-prim-bin-bignum operador (get-Bignum-estruct bignums) (evaluar-expresion bignums amb)))
       
       (primapp-bin-exp (exp1 prim exp2)
                    (apply-prim-bin  exp1 prim exp2 amb))
@@ -302,6 +331,8 @@
       )))
 
 ;funciones auxiliares para aplicar evaluar-expresion a cada elemento de una lista de operandos (expresiones)
+
+
 
 
 ;funcion auxiliar para obtener elemento en una posicion de una lista
@@ -459,23 +490,7 @@
 ;Realiza la busqueda de un símbolo en un ambiente
 ;Empleada en la evaluacion de una expresion, para encontrar una variable dada en un ambiente dado, si no se encuentra la variable, retorna un
 ;mensaje de error
-;(define buscar-variable
-;  (lambda (amb sym)
-;    (cases ambiente amb
-;      (empty-amb-record ()
-;                        (eopl:error 'apply-amb "Error, la variable no existe" sym))
-;      (extended-amb-record (syms vals amb)
-;                           (let ((pos (list-find-position sym syms)))
-;                             (if (number? pos)
-;                                 (list-ref vals pos)
-;                                 (buscar-variable amb sym))))
-;      (recursively-extended-amb-record (proc-names idss bodies old-env)
-;                                       (let ((pos (list-find-position sym proc-names)))
-;                                         (if (number? pos)
-;                                             (closure (list-ref idss pos)
-;                                                      (list-ref bodies pos)
-;                                                      amb)
-;                                             (buscar-variable old-env sym)))))))
+                                   
 
 (define apply-env
   (lambda (env sym)
@@ -533,7 +548,6 @@
                 #f))))))
 
 
-; 7) Extienda la gramática para evaluar procedimientos:
 ;<expresion> :=  "evaluar" expresion   (expresion ",")*  finEval
 ;app-exp(exp exps)
 ;Determina como aplicar un valor de tipo procedimiento
@@ -542,3 +556,97 @@
      (cases procval proc
       (closure (ids cuerpo amb)
                (evaluar-expresion cuerpo (extend-amb ids exps amb))))))
+
+
+;;Bignum------------------------------------------------
+
+
+;Funcion para obtener el exponente de dato Bignum
+(define get-Bignum-estruct
+  (lambda (exp)
+    (cases expresion exp
+      (bignum-exp (exponente numeros) (get-exponente exponente))
+      (else (eopl:error 'get-Bignum "No es un exponente ~s" exp)))))
+
+;obtener exponente de un struct de creacion
+(define get-exponente
+  (lambda (estruct)
+    (cases crea-bignum estruct
+                    (octa-exp () 8)
+                    (hexa-exp () 16)
+                    (triges-exp () 32))))
+
+
+;manejo primitivas unarias bignum
+(define apply-prim-una-bignum
+  (lambda (oper exp numeros)
+    (cases primun-bignum oper
+      (predes () (predecessor numeros exp))
+      (succes () (successor numeros exp)))))
+
+
+;manejo binarias unarias bignum
+(define apply-prim-bin-bignum
+  (lambda (oper exp lista1 lista2 amb)
+    (cases primbin-bignum oper
+      (sum-bignum () (suma-bignum (evaluar-expresion lista1 amb) lista2 exp))
+      (sub-bignum () (resta-bignum (evaluar-expresion lista1 amb) lista2 exp))
+      (mult-bignum () (multi-bignum (evaluar-expresion lista1 amb) lista2 exp))
+      (pot-bignum () (potencia-bignum (evaluar-expresion lista1 amb) lista2 exp)))))
+
+
+;Proposito: Constructor de Bignum encargado de expresar el siguiente numero de un Bignum.
+;Recibe una lista que representa un Bignum y devuelve el sucesor de este, Bignum+1.
+(define successor (lambda (n max)
+                   (cond
+                     [(null? n) (cons 1 empty)]
+                     [(< (car n) max) (cons (+ (car n) 1)(cdr n))]
+                     [else (cons 1 (successor (cdr n) max))]
+                     )))
+
+
+;Proposito: Constructor de Bignum encargado de expresar el numero anterior de un Bignum.
+;Recibe una lista que representa un Bignum y devuelve el predecesor de este, Bignum-1.
+(define predecessor (lambda (n max)
+                      (cond
+                        [(eqv? n empty) eopl:error 'top "No tiene predecesor"]
+                        [(and (eqv? (car n) 1) (eqv? (cdr n) empty)) empty]
+                        [(> (car n) 1) (cons (- (car n) 1)(cdr n))]
+                        [else (cons max (predecessor (cdr n) max))]
+                        )))
+
+;Proposito: sumar dos numeros tipo bignum
+;Funcion binaria que recibe dos numeros positivos y retorna la suma de estos
+(define suma-bignum
+  (lambda (x y exp)
+    (if (null? x)
+        y
+        (successor (suma-bignum (predecessor x exp) y exp) exp))))
+
+;Proposito: sumar dos numeros tipo bignum
+;Funcion binaria que recibe dos numeros positivos y retorna la suma de estos
+;Proposito: restar dos numeros
+;Funcion binaria que recibe dos numeros positivos (x y), con x mayor que y, y retorna la resta de estos
+(define resta-bignum
+  (lambda (x y exp)
+    (if (null? y)
+        x
+        (predecessor (resta-bignum  x (predecessor y exp) exp) exp))))
+
+
+;Proposito: multiplicar dos numeros tipo bignum
+;Funcion binaria que recibe dos numeros positivos y retorna la multiplicacion de estos
+(define multi-bignum
+  (lambda (x y exp)
+    (if (null? x)
+        ('())
+        (suma-bignum (multi-bignum (predecessor x exp) y exp) y exp))
+    ))
+
+;Proposito: elevar un numero n a la potencia m
+;Funcion binaria que recibe dos numeros ( n m ) y retorna la potencia con n como base y m como exponente
+(define potencia-bignum
+  (lambda (x y exp)
+    (if (null? y)
+        (successor y exp)
+        (multi-bignum (potencia-bignum x (predecessor y exp) exp) x exp))))
