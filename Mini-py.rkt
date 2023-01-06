@@ -52,9 +52,7 @@
                 begin-exp)
   (expresion ("set" identificador "=" expresion)
                 set-exp)
-  ;De listas
-  (expresion (prim-set-lista identificador "=" expresion)
-                set-list-exp)
+  
   
   ;Variables y constantes
   (expresion ("var" (arbno identificador "=" expresion)"," "in" expresion ";") var-exp) ;Hacer el manejo de los valores mutables
@@ -62,6 +60,8 @@
 
   ;Control para listas, tuplas y registro
   (expresion (prim-lista "(" (separated-list expresion ",") ")") lista-exp)
+  (expresion ("set-lista(" expresion "," expresion "," expresion ")") set-list)
+  (expresion ("ref-lista(" expresion "," expresion ")") ref-list)
 
   ; Primitiva binaria
   (primitiva-bin ("+") primitiva-suma)
@@ -71,14 +71,15 @@
   (primitiva-bin ("concat") primitiva-concat)
 
   ;Primitiva listas
-  (prim-lista ("crear-lista") list-prim)
+  (prim-lista ("crear-lista") crea-list-prim)
+  (prim-lista ("'") lista-prim)
   (prim-lista ("append") append-prim)
   (prim-lista ("vacio")  vacio-prim)
   (prim-lista ("cabeza")  car-prim)
   (prim-lista ("cola")  cdr-prim)
   (prim-lista ("vacio?") null?-prim)
   (prim-lista ("lista?") list?-prim)
-  (prim-set-lista ("set-lista") set-list-prim)
+  
   
 
   ; Primitiva unaria
@@ -228,6 +229,17 @@
                  (let ((args (eval-rands-list rands amb)))
                    (apply-prim-list prim args)))
       
+      (set-list (lista pos dato)
+                (let ((lista (evaluar-expresion lista amb))
+                      (pos (evaluar-expresion pos amb))
+                      (dato (evaluar-expresion dato amb)))
+                      (set-position-list lista pos dato)))
+      
+      (ref-list (lista pos)
+                (let ((lista (evaluar-expresion lista amb)))
+                  (get-position-list lista (evaluar-expresion pos amb))))
+
+      
       (variableLocal-exp (ids exps cuerpo)
                          (let ((args (eval-let-exp-rands exps amb)))
                            (evaluar-expresion cuerpo
@@ -270,12 +282,7 @@
                    ))
                )
 
-      (set-list-exp (exp id rhs-exp)
-                    (begin
-                 (setref!
-                  (apply-env-ref amb id)
-                  (evaluar-expresion rhs-exp amb))
-                 0))
+      
       
       (set-exp (id rhs-exp)
                (begin
@@ -296,6 +303,30 @@
 
 ;funciones auxiliares para aplicar evaluar-expresion a cada elemento de una lista de operandos (expresiones)
 
+
+;funcion auxiliar para obtener elemento en una posicion de una lista
+(define get-position-list
+  (lambda (lista pos)
+    (list-ref lista pos)))
+
+;funcion auxiliar para cambiar elemento en una posicion de una lista
+(define set-position-list
+  (lambda (lista n x)
+    (letrec
+        (
+         (new-list
+          (lambda (listaaux pos dato count)
+            (cond
+              [(eqv? listaaux '()) empty]
+              [(eqv? count pos) (cons dato (new-list (cdr listaaux) pos dato (+ 1 count)))]
+              [else (cons (car listaaux) (new-list (cdr listaaux) pos dato (+ 1 count)))]
+              )
+            )
+          )
+         )
+      (new-list lista n x 0))
+    )
+  )
 
 ;funcion auxiliar para evaluar los rands de una lista
 (define eval-rands-list
@@ -365,7 +396,8 @@
 (define apply-prim-list
   (lambda (prims args)
     (cases prim-lista prims
-      (list-prim () args)               ;already a list
+      (crea-list-prim () args)               ;already a list
+      (lista-prim () args)
       (vacio-prim () '())
       (car-prim () (car (car args)))
       (cdr-prim () (cdr (car args)))
@@ -373,6 +405,10 @@
       (null?-prim () (if (null? (car args)) 1 0))
       (list?-prim () (list? (car args)))
       )))
+
+
+      
+  
 
 ;definición del tipo de dato ambiente
 ; Es una herramienta de Scheme para construir e implementar interfaces para tipos de dato ambiente (ambiente vacio, ambiente extendido y ambiente extendido recursivo)
