@@ -103,7 +103,7 @@
   (prim-lista ("vacio?") null?-prim)
   (prim-lista ("lista?") list?-prim)
 
-  ;Primitiva tuplas crear-tupla, tupla?
+  ;Primitiva tuplas 
   (primitiv-tupla ("crear-tupla") primitiva-crear-tupla)
   (primitiv-tupla ("tupla?") primitiva-?tupla)
   (primitiv-tupla ("tvacio") primitiva-tvacio)
@@ -624,12 +624,13 @@
   (lambda (prim-tupla args)
     (cases primitiv-tupla prim-tupla
       (primitiva-crear-tupla () args) ;pair
-      (primitiva-?tupla () (pair? args))
-      (primitiva-tvacio () ("tupla[]"))
+      (primitiva-?tupla () (if(null? args) #t (pair? args)))
+      (primitiva-tvacio () "tupla[]")
       (primitiva-?tvacio () (if (null? args) #t #f))
       (primitiva-tcabeza () (car args))
       (primitiva-tcola () (cdr args))
       )))
+
 ;                                                               ----------------------------------- AMBIENTES ----------------------------------
 ; ---------------Ambiente inicial-------------------------
 ; Es una funcion cuyo dominio es un conjunto finito de variables y cuyo rango es el conjunto de todos los valores de Scheme, es usado usado para asociar las variables con sus valores en la implementacion
