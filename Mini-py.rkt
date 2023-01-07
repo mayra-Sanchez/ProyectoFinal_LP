@@ -116,7 +116,7 @@
   (prim-registro ( "crear-registro" "{" (separated-list identificador "=" expresion ",") "}") primitiva-crearRegistro)
   (prim-registro ("registro?" "(" expresion ")") primitiva-registro?)
   (prim-registro ("ref-registro" "(" expresion "," identificador")") primitiva-refRegistro)
-  ;(prim-registro ("set-registro") primitiva-setRegistro)
+  (prim-registro ("set-registro" "("expresion "," identificador "," expresion ")") primitiva-setRegistro)
   
 
  ;Primitiva binaria
@@ -647,6 +647,8 @@
 
 ;------------Registros------------------
 
+;------------Registros------------------
+
 (define eval-registro
   (lambda (registro-exp amb)
     (cases prim-registro registro-exp
@@ -657,8 +659,12 @@
                   (if (list? registro)
                       (and (vector? (car registro)) (vector? (cadr registro )))
                       #f))]
+
       [primitiva-refRegistro (registro key) (buscar-key key (car (evaluar-expresion registro amb)) (cadr (evaluar-expresion registro amb)) amb)]
 
+      [primitiva-setRegistro (rgstr name value) (let ((array (evaluar-expresion rgstr amb))
+                                       (newitem (evaluar-expresion value amb)))
+                                   (vector-set! (cadr array) (- (length (member name (reverse (vector->list (car array))))) 1) newitem))]      
     )))
 
 (define buscar-key
