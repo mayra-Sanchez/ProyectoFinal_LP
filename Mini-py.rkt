@@ -62,6 +62,7 @@
   (expresion ("ref-lista(" expresion "," expresion ")") ref-list)
   (expresion (primitiv-tupla "tupla" "[" (separated-list expresion ";") "]") tupla-exp)
   (expresion ("ref-tuple(" expresion "," expresion ")") ref-tupla)
+  (expresion (prim-registro) reg-exp)
 
   ;manejo primitivas bignum
   (expresion (primbin-bignum "(" expresion "," "(" (arbno numero) ")" ")") controlbin-bignum)
@@ -110,6 +111,12 @@
   (primitiv-tupla ("tvacio?") primitiva-?tvacio)
   (primitiv-tupla ("tcabeza") primitiva-tcabeza)
   (primitiv-tupla ("tcola") primitiva-tcola)
+
+  ;Primitivas de registros
+  (prim-registro ( "crear-registro" "{" (separated-list identificador "=" expresion ",") "}") primitiva-crearRegistro)
+  (prim-registro ("registro?" "(" expresion ")") primitiva-registro?)
+  (prim-registro ("ref-registro" "(" expresion "," identificador")") primitiva-refRegistro)
+  (prim-registro ("set-registro" "("expresion "," identificador "," expresion ")") primitiva-setRegistro)
   
 
  ;Primitiva binaria
@@ -219,6 +226,9 @@
       (ref-tupla (tupla pos)
                  (let ((tupla (evaluar-expresion tupla amb)))
                    (get-position-list tupla (evaluar-expresion pos amb))))
+
+      (reg-exp (objeto) (eval-registro objeto amb))
+      
       
       (variableLocal-exp (ids exps cuerpo)
                          (let ((args (eval-let-exp-rands exps amb)))
@@ -416,6 +426,10 @@
                                  "No es posible modificar una constante" ))
                      (else (eval-rands (cdr rands))))]
       )))
+
+(define eval-rands-reg
+  (lambda (rands amb)
+    (map (lambda (x) (evaluar-expresion x amb)) rands)))
 
 ;funcion auxiliar para evaluar los rands de una lista
 (define eval-rands-list
@@ -630,6 +644,39 @@
       (primitiva-tcabeza () (car args))
       (primitiva-tcola () (cdr args))
       )))
+
+
+;------------Registros------------------
+
+;------------Registros------------------
+
+(define eval-registro
+  (lambda (registro-exp amb)
+    (cases prim-registro registro-exp
+      [primitiva-crearRegistro (key list-exp)
+                    (list (list->vector key)(list->vector (eval-rands-reg list-exp amb)))]
+
+      [primitiva-registro? (registro) (let (( registro (evaluar-expresion registro amb)))
+                  (if (list? registro)
+                      (and (vector? (car registro)) (vector? (cadr registro )))
+                      #f))]
+
+      [primitiva-refRegistro (registro key) (buscar-key key (car (evaluar-expresion registro amb)) (cadr (evaluar-expresion registro amb)) amb)]
+
+      [primitiva-setRegistro (rgstr name value) (let ((array (evaluar-expresion rgstr amb))
+                                       (newitem (evaluar-expresion value amb)))
+                                   (vector-set! (cadr array) (- (length (member name (reverse (vector->list (car array))))) 1) newitem))]      
+    )))
+
+(define buscar-key
+  (lambda (key list-keys list-values amb)
+    (cond
+      [(null? list-keys) (eopl:error buscar-key "Is not found ~s" key)]
+      [(equal? key (car (vector->list list-keys))) (car (vector->list list-values))] 
+      [else (buscar-key key (list->vector (cdr (vector->list list-keys))) (list->vector (cdr (vector->list list-values))) amb)]
+      )
+    ))
+
 
 ;                                                               ----------------------------------- AMBIENTES ----------------------------------
 ; ---------------Ambiente inicial-------------------------
