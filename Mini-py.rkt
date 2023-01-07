@@ -115,7 +115,7 @@
   ;Primitivas de registros
   (prim-registro ( "crear-registro" "{" (separated-list identificador "=" expresion ",") "}") primitiva-crearRegistro)
   (prim-registro ("registro?" "(" expresion ")") primitiva-registro?)
-  ;(prim-registro ("ref-registro" "(" expresion "," identificador")") primitiva-refRegistro)
+  (prim-registro ("ref-registro" "(" expresion "," identificador")") primitiva-refRegistro)
   ;(prim-registro ("set-registro") primitiva-setRegistro)
   
 
@@ -657,8 +657,18 @@
                   (if (list? registro)
                       (and (vector? (car registro)) (vector? (cadr registro )))
                       #f))]
+      [primitiva-refRegistro (registro key) (buscar-key key (car (evaluar-expresion registro amb)) (cadr (evaluar-expresion registro amb)) amb)]
 
     )))
+
+(define buscar-key
+  (lambda (key list-keys list-values amb)
+    (cond
+      [(null? list-keys) (eopl:error buscar-key "Is not found ~s" key)]
+      [(equal? key (car (vector->list list-keys))) (car (vector->list list-values))] 
+      [else (buscar-key key (list->vector (cdr (vector->list list-keys))) (list->vector (cdr (vector->list list-values))) amb)]
+      )
+    ))
 
 ;                                                               ----------------------------------- AMBIENTES ----------------------------------
 ; ---------------Ambiente inicial-------------------------
