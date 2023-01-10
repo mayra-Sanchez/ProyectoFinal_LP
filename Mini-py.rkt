@@ -263,21 +263,23 @@
       
       (const-exp (ids rands body)
                  (begin
-                   (eval-rands rands)
-                   (cases expresion body
-                     (set-exp (id exp) (eopl:error 'evaluar-expresion
-                                 "No es posible modificar una constante" ))                     
-                     (else (let ((args (eval-let-exp-rands rands amb)))
-                         (evaluar-expresion body (extend-amb ids args amb))))
-                   ))
+                   (set! lista-constantes (append lista-constantes ids))
+                   (let ((args (eval-let-exp-rands rands amb)))
+                     (evaluar-expresion body (extend-amb ids args amb)))
+                   )
                )
       
       (set-exp (id rhs-exp)
                (begin
-                 (setref!
+                 (cond
+                   [(buscar-elemento lista-constantes id) (eopl:error 'evaluar-expresion
+                                 "No es posible modificar una constante" )]
+                   [else (setref!
                   (apply-env-ref amb id)
-                  (evaluar-expresion rhs-exp amb))
-                 0))
+                  (evaluar-expresion rhs-exp amb))])
+                 1
+                 ))
+
       
       (begin-exp (exp exps)
                  (let loop ((acc (evaluar-expresion exp amb))
@@ -492,6 +494,22 @@
     (cases primitiva-un-entero prim
       (primitiva-add1 () (+ (evaluar-expresion arg amb ) 1))
       (primitiva-sub1 () (- (evaluar-expresion arg amb ) 1)))))
+
+
+
+;variable para manjeo de constantes
+(define lista-constantes '())
+
+;Dice si un elemento se encuentra en una lista
+(define buscar-elemento
+  (lambda (lista elemento)
+    (cond
+      [(null? lista) #f]
+      [else
+       (if(eqv? (car lista) elemento) #t
+          (buscar-elemento (cdr lista) elemento))])))
+
+
 
 ;----------- Bignum -----------
 ;Funcion para obtener el exponente de dato Bignum
