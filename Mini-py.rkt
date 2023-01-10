@@ -236,7 +236,7 @@
                            (extend-amb ids args amb))))
       
       (condicional-exp (test-exp true-exp false-exp)
-                        (if (valor-verdad? (evaluar-expresion test-exp amb))
+                        (if (evaluar-expresion test-exp amb)
                             (evaluar-expresion true-exp amb)
                             (evaluar-expresion false-exp amb)))
 
@@ -843,8 +843,3 @@
       (if (>= next end) '()
         (cons next (loop (+ 1 next)))))))
 
-; valor-verdad?
-; Esta funcion recibe un argumento y determina si corresponde al valor booelano falso (es igual a cero) o al valor booelano verdadero (cualquier otro valor).
-(define valor-verdad?
-  (lambda (x)
-    (not (zero? x))))
