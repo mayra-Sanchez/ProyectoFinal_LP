@@ -1,0 +1,147 @@
+Definicion BNF para expresiones
+<programa>    ::= ({<class-decl>}* <expresion>) 
+                  un-programa (c-decls exp)
+<expresion>   ::= <numero>
+                  numero-lit (num)
+              ::= "\""<texto> "\""
+                  texto-lit (txt)
+              ::= <printf> 
+                  printf-exp
+              ::= <identificador>
+                  id-exp (id)
+              ::= <boolean>
+                  expr-bool 
+              ::= <crea-bignum> "(" {<numero>}* ")"
+                  bignum-exp
+              ::= "(" <expresion> <primitiva-bin-entero> <expresion> ")"
+			primapp-bin-exp
+		  ::= <primitiva-un-entero> "(" <expresion> ")"
+			primapp-un-exp
+		  ::= "declarar" "(" <identificador> "=" <expresion> (;) ")" "{" <expresion> "}"
+			variableLocal-exp
+		  ::= "if" <expresion> "then" <expresion> "[" "else" <expresion "]" "end"
+			condicional-exp
+		  ::= "def" "(" <identificador> (,) ")" "{" <expresion> "}"
+			proc-exp
+		  ::= "eval" <expresion> "[" <expresion> (,) "]"
+			app-exp
+		  ::= "def-rec" {<identificador>}* "(" <identificador> (,) ")" "=" <expresion> "in" <expresion>
+			defrec-exp
+		  ::= "while" <boolean> "do" <expresion> "done"
+			while-exp
+		  ::= "for" <identificador> "=" <expresion> "to" <expresion> "do" <expresion> "done
+			for-exp
+		  ::= "begin" <expresion> {(;) <expresion>}* "end"
+			begin-exp
+		  ::= "set" <identificador> "=" <expresion>
+			set-exp
+		  ::= "var" (<identificador> "=" <expresion> (",")) "in" <expresion> ";"
+			var-exp
+		  ::= "const" (<identificador> "=" <expresion> (",")) "in" <expresion> ";"
+			const-exp
+		  ::= <prim-lista> "(" (<expresion> (",")) ")"
+			lista-exp
+		  ::= "set-lista(" <expresion> "," <expresion> "," <expresion> ")"
+			set-list
+		  ::= "ref-lista(" <expresion> "," <expresion> ")"
+			ref-list
+		  ::= <primitiv-tupla> "tupla" "[" (<expresion> (";")) "]"
+			tupla-exp
+		  ::= "ref-tuple("<expresion> "," <expresion> ")"
+			ref-tupla
+		  ::= <prim-registro>
+			reg-exp
+		  ::= <primbin-bignum> "(" <expresion> "," "(" {<numero>}* ")" ")"
+			controlbin-bignum
+		  ::= <primun-bignum> "(" <expresion> ")"
+			controlun-bignum
+		  ::= <prim-string>
+			string-exp
+		  ::= "new" <identificador> "(" (<expresion> (",")) ")"
+			new-object-exp
+		  ::= "send" <expresion> <identificador> "(" (<expresion> (",")) ")"
+			method-app-exp
+		  ::= "super" <identificador> "(" (<expresion> (",")) ")"
+			super-call-exp
+
+<boolean>	  ::= <bool>
+			trueFalse-exp
+		  ::= <pred-prim> "(" <expresion> "," <expresion> ")" 
+			comparacion-exp
+		  ::= <oper-bin-bool> "(" <boolean> "," <boolean> ")"
+			op-log-exp
+		  ::= <oper-un-bool> "(" <boolean> ")"
+			oper-un-bool-exp
+
+<bool>	  ::= "True"
+			true-exp
+		  ::= "False"
+			false-exp
+
+<pred-prim>   ::= "<" (menor-bool)
+		  ::= ">" (mayor-bool)
+		  ::= "<=" (menorIgual-bool)
+		  ::= ">=" (mayorIgual-bool)
+		  ::= "=" (igual-bool)
+		  ::= "<>" (noIgual-bool)
+
+<oper-bin-bool> ::= "and" (and-bool)
+		    ::= "or" (or-bool)
+		    ::= "not" (not-bool)
+
+<prim-lista>  ::= "crear-lista" (crea-list-prim)
+		  ::= "'" (lista-prim)
+		  ::= "append" (append-prim)
+		  ::= "vacio" (vacio-prim)
+		  ::= "cabeza" (car-prim)
+		  ::= "cola" (cdr-prim)
+		  ::= "vacio?" (null?-prim)
+		  ::= "lista?" (list?-prim)
+
+<primitiv-tupla>  ::= "crear-tupla" (primitiva-crear-tupla)
+		  	::= "tupla?" (primitiva-?tupla)
+		  	::= "tvacio" (primitiva-tvacio)
+		 	::= "tvacio?" (primitiva-?tvacio)
+			::= "tcabeza" (primitiva-tcabeza)
+			::= "tcola" (primitiva-tcola)
+
+<prim-registro>   ::= "crear-registro" "{" (<identificador> "=" <expresion> (,)) "}" (primitiva-crearRegistro)
+			::= "registro?" "(" <expresion> ")" (primitiva-registro?)
+			::= "ref-registro" "(" <expresion> "," <identificador> ")" (primitiva-refRegistro)
+			::= "set-registro" "(" <expresion> "," <expresion> "}" (primitiva-setRegistro)
+
+<primitiva-bin-entero> :=  "+" (primitiva-suma)
+                       :=  "-" (primitiva-resta)
+                       :=  "/" (primitiva-div)
+                       :=  "*" (primitiva-multi)
+                       :=  "%" (primitiva-mod)
+
+<primitiva-un-entero>   :=  "++" (primitiva-add1)
+     	 			:=  "--" (primitiva-sub1)
+
+<crea-bignum>		::= "x8"
+				   octa-exp
+				::= "x16"
+				   hexa-exp
+				::= "x32"
+				   triges-exp
+
+<primbin-bignum>		::= "sum-bignum" (sum-bignum)
+				::= "sub-bignum" (sub-bignum)
+				::= "mult-bignum" (mult-bignum)
+				::= "pot-bignum" (pot-bignum)
+
+<primun-bignum>		::= "succes" (succes)
+				::= "predes" (predes)
+
+<prim-string>		::= "concat" "(" <expresion> "," <expresion> ")"
+				   concat-exp
+				::= "longitud" "(" <expresion> ")"
+				   longitud-exp
+
+<class-decl>		::= "class" <identificador> "extends" <identificador> {"field" <identificador>}* {<method-decl>}*
+				   a-class-decl
+
+<method-decl>		::= "method" <identificador> "(" (<expresion>(",")) ")"
+				   a-method-decl
+

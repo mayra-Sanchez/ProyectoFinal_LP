@@ -7,8 +7,8 @@
 
 ; URL github: https://github.com/mayra-Sanchez/ProyectoFinal_LP
 
-;                                     ----------------------------------- MINI PYTHON ----------------------------------
-
+;                                ----------------------------------- MINI PYTHON ----------------------------------
+; Gramatica y ejemplos en el github
 ; ------------ Especificacion lexica --------------------------
 (define especificacion-lexica
   '((espacio-blanco (whitespace) skip)
@@ -424,7 +424,8 @@
 ;Definición de tipos para trabajar referencias
 (define expval?
   (lambda (x)
-    (or (number? x) (procval? x) (list? x) (object? x))))
+    (or (number? x) (procval? x) (list? x) (object? x)
+        (string? x) (vector? x) (pair? x))))
 
 (define ref-to-direct-target?
   (lambda (x)
@@ -636,7 +637,7 @@
 (define multi-bignum
   (lambda (x y exp)
     (if (null? x)
-        ('())
+        x
         (suma-bignum (multi-bignum (predecessor x exp) y exp) y exp))
     ))
 
@@ -716,7 +717,6 @@
       )))
 
 ;------------Registros------------------
-
 (define eval-registro
   (lambda (registro-exp amb)
     (cases prim-registro registro-exp
@@ -749,12 +749,6 @@
 ; ---------------Ambiente inicial-------------------------
 ; Es una funcion cuyo dominio es un conjunto finito de variables y cuyo rango es el conjunto de todos los valores de Scheme, es usado usado para asociar las variables con sus valores en la implementacion
 ; de un lenguaje de programacion.
-;(define init-amb
-;  (lambda ()
-;    (extend-amb
-;     '(@a @b @c @d @e)
-;     '(1 2 3 "hola" "FLP")
-;     (empty-amb))))
 (define init-amb
   (lambda ()
     (extend-amb

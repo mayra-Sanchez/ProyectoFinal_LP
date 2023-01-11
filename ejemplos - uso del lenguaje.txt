@@ -1,0 +1,357 @@
+﻿—----------------------------- Constantes y variables —-----------------------
+
+
+var $a=4 in begin set $a=8;
+$a
+end
+;
+
+
+var $a=3 in begin
+set $a=4;
+$a
+end
+;
+
+
+var $a=3, in const 
+$b=6, in begin 
+set $a=4; 
+$a 
+end
+;
+;
+
+
+const $a=2 in
+var $b=4 in
+begin
+set $b=5;
+$b
+end
+;
+;
+
+
+const $a= 2 in
+var $b= 5 in
+begin
+set $b= crear-registro {$a = 1, $b = 2};
+$b
+end
+;
+;
+
+
+const $a=2 in
+var $b=4 in
+begin
+set $a=5;
+$a
+end
+;
+;
+
+
+------------------------------------ PRIMITIVAS ------------------------------
+* String
+
+
+concat( "Hola" , "Grupo") -> "HolaGrupo"
+longitud( "Grupo" ) -> 5
+
+
+* Binarias-entero
+
+
+(2 + 8) -> 10
+(2 - 8) -> -6
+(5 * 10) -> 50
+(5 / 10) -> 1 / 2
+(5 % 10) -> 5
+
+
+* Unarias-entero
+
+
+++(50) -> 51
+--(90) -> 89
+
+
+* Bignum
+
+
+predes(x8(1 1 1))  -> (8 8)
+
+
+predes(x8(1))  -> () 
+
+
+succes(x8(1 1 1)) -> (2 1 1)
+
+
+sum-bignum(x16(1 2),  ()) -> (1 2)
+
+
+sum-bignum(x16(1 2),  (2 4)) -> (3 6)
+
+
+sub-bignum(x32(2 4),  (2 4)) -> ()
+
+
+mult-bignum(x16(1 2),  (2 4)) -> (2 8 8)
+
+
+pot-bignum(x16(2), (4)) -> 16
+
+
+
+
+* Booleanas - comparación
+
+
+=( 3, 3) -> #t
+<> ( 3, 3) -> #f
+<=(5, 3) -> #f
+>=( 8, 1) -> #t
+>( 1, 2) -> #f
+<( 5, 2) -> #f
+
+
+* Booleanas - lógica
+
+
+not(True) -> #f
+not(False) -> #t
+
+
+and( True , False) -> #f
+and( False , False) -> #f
+and( False , True) -> #f
+and( True , True) -> #t
+
+
+or( True , False) -> #t
+or( False , False) -> #f
+or( False , True) -> #t
+or( True , True) -> #t
+
+
+* Tuplas
+
+
+crear-tupla tupla[2;3] -> (2 3)
+tupla? tupla[4;6] -> #t
+tupla? tupla[] -> #t
+vacio -> tupla[]
+tvacio? tupla[3;9] -> #f
+tvacio? tupla[] -> #t
+tcabeza tupla[6;3] -> 6
+tcola tupla[6;3] -> (3)
+
+
+* Listas
+
+
+--> var @a= crear-lista(1,2), in begin 
+set-lista @a=crear-lista(4,3);
+@a
+end
+;
+
+
+declarar(@x=crear-lista(1,2,3))
+{
+begin
+set-lista @x=crear-lista(5);
+@x
+end
+}
+
+
+* Registros
+
+
+crear-registro {$a = 1, $b = 2} -> (#($a $b) #(1 2))
+
+
+registro? (crear-registro {$a = 1, $b = 2}) -> #t
+
+
+        ref-registro (crear-registro {$a = 1, $b = 2}, $a) -> 1
+
+
+        var $reg = crear-registro {$a = 1, $b = 2}, in begin 
+set-registro ($reg, $a, 2); 
+$reg
+end
+; -> (#($a $b) #(2 2))
+        
+---------------------------- Ejemplo de ciclos -----------------------------------
+
+
+* For:
+
+
+for $i = 1 to 10 do printf ("Hola") done 
+
+
+for $i = 1 to 5 do begin printf ("Hola"); for $i = 1 to 2 do printf ("Grupo") done end done 
+
+
+* While:
+
+
+const $x =5 in 
+var $y = 0  in 
+while >( $x , $y ) do begin set $y = ( $y + 1 ) ; printf ("Hizo_una_vuelta") end done ; ;
+
+
+const $x = 5  in
+var $y = 0  in 
+while >( $x , $y ) do begin set $y = ( $y + 1 ) ; printf ($y) end done ; ;
+
+
+const $x = 10, in
+var $y = 0  in 
+while >( $x , $y ) do begin set $y = ( $y + 2 ) ; printf ($y) end done ; 
+
+
+—-------------------ejemplo Listas—-------------------------------
+'(1, 2, 3)
+(1 2 3)
+
+
+crear-lista(4,5,6)
+(4 5 6)
+
+
+append('(1,2,3), '(4,5,6))
+(1 2 3 4 5 6)
+
+
+cons("hola", " mundo")
+("hola" "mundo")
+
+
+vacio()
+()
+
+
+cabeza('(1, 2, 3, 4, 5, 6))
+1
+
+
+cola('(1, 2, 3, 4, 5, 6))
+(2 3 4 5 6)
+------------------- ejemplo objetos -------------------------------
+class $c1 extends $object
+field $x 
+field $y
+method $initialize($name,$age)
+begin set $x = $name; 
+set $y = $age 
+end 
+method $m1() $x 
+method $m2() $y
+var
+$o1 = new $c1(4,36)
+in send $o1 $m1()
+;
+—--------------------------------------------
+class $medicina extends $object
+field $activo
+field $dosisUnidad
+method $initialize ($a, $d)
+begin
+set $activo = $a;
+set $dosisUnidad = $d
+end
+method $mostrarActivo() $activo
+method $mostrarDosisU() $dosisUnidad
+var
+ $paula = new $medicina("sertalina" ,"mg" )
+in
+var $i= send $paula $mostrarActivo(),
+  $j= send $paula $mostrarDosisU()
+in
+ crear-tupla tupla[$i;$j]
+;
+;
+—------------------------------------
+class $clientes extends $object
+field $nombre
+field $apellido
+field $edad
+method $initialize ($a, $b, $c) 
+begin 
+set $nombre = $a; 
+set $apellido = $b; 
+set $edad = $c 
+end
+method $mostrarNombre() $nombre
+method $mostrarApellido() $apellido
+method $mostrarEdad() $edad
+var
+ $x = new $clientes("Jesus" ,"Casañas" , 13)
+in
+var $y= send $x $mostrarNombre(),
+  $z= send $x $mostrarApellido(),
+  $a= send $x $mostrarEdad()
+in
+ crear-lista($y,$z,$a)
+;
+;
+—-------------------------------------
+class $figuras extends $object
+ field $area
+ field $perimetro
+ method $initialize($a, $b) begin set $area=$a; set $perimetro=$b end
+ method $cambiarArea($a) set $area=$a
+ method $mostrarArea() $area
+var
+ $x=new $figuras(5,9)
+in
+ begin
+ send $x $mostrarArea()
+ end
+;
+—----------------------------
+class $point extends $object
+field $x
+field $y
+method $initialize ($initx, $inity)
+begin
+set $x = $initx;
+set $y = $inity
+end
+class $colorpoint extends $point
+field $color
+method $initialize ($initx, $inity, $initcolor)
+begin
+super $initialize ($initx, $inity);
+set $color = $initcolor
+end
+method $getcolor() $color
+var 
+$x = new $colorpoint(3,4,5)
+in 
+begin 
+send $x $getcolor()
+end
+;
+—-------------------------------
+class $figuras extends $object
+ field $area
+ field $perimetro
+ method $initialize() 1
+ method $cambiarArea($a) set $area=$a
+ method $mostrarArea() $area
+var
+ $x=new $figuras()
+in
+ begin
+ send $x $cambiarArea(7);
+ send $x $mostrarArea()
+ end
+;
