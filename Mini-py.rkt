@@ -7,7 +7,7 @@
 
 ; URL github: https://github.com/mayra-Sanchez/ProyectoFinal_LP
 
-;                                                               ----------------------------------- MINI PYTHON ----------------------------------
+;                                     ----------------------------------- MINI PYTHON ----------------------------------
 
 ; ------------ Especificacion lexica --------------------------
 (define especificacion-lexica
@@ -24,13 +24,14 @@
 (define gramatica
 '(
   ;programa
-  (programa (expresion) un-programa)
+  (programa ((arbno class-decl) expresion) un-programa)
 
   ;Cuerpo
   (cuerpo (expresion (arbno expresion)) cuerpoc)
 
   ;Expresiones
   (expresion (numero) numero-lit)
+  (expresion ("mostrar") mostrar-exp)
   (expresion ("\"" texto "\"") texto-lit)
   (expresion (identificador) id-exp)
   (expresion (boolean) expr-bool)
@@ -71,6 +72,7 @@
   ;String
   (expresion (prim-string) string-exp)
 
+
   ;Booleanos
   (boolean (bool) trueFalse-exp)
   (boolean (pred-prim "(" expresion "," expresion ")") comparacion-exp)
@@ -98,6 +100,7 @@
   (prim-lista ("crear-lista") crea-list-prim)
   (prim-lista ("'") lista-prim)
   (prim-lista ("append") append-prim)
+  (prim-lista ("cons") cons-prim)
   (prim-lista ("vacio")  vacio-prim)
   (prim-lista ("cabeza")  car-prim)
   (prim-lista ("cola")  cdr-prim)
@@ -144,9 +147,38 @@
   ;Primitiva string
   (prim-string ("concat" "(" expresion "," expresion ")") concat-exp)
   (prim-string ("longitud" "(" expresion ")") longitud-exp)
+
+  ; Objetos
+  (class-decl                         
+      ("class" identificador 
+        "extends" identificador                   
+         (arbno "field" identificador)
+         (arbno method-decl)
+         )
+      a-class-decl)
+
+  (method-decl
+      ("method" identificador 
+        "("  (separated-list identificador ",") ")" ; method ids
+        expresion 
+        )
+      a-method-decl)
+
+  (expresion 
+      ("new" identificador "(" (separated-list expresion ",") ")")
+      new-object-exp)
+
+    (expresion
+      ("send" expresion identificador
+        "("  (separated-list expresion ",") ")")
+      method-app-exp)
+
+    (expresion                                
+      ("super" identificador    "("  (separated-list expresion ",") ")")
+      super-call-exp)
   
 ))
-;                                                               ----------------------------------- INTERPRETADOR ----------------------------------
+;                                             ----------------------------------- INTERPRETADOR ----------------------------------
 
 ; Tipos de datos para la sintaxis abstracta de la gramática construidos automáticamente:
 
@@ -174,14 +206,18 @@
     (sllgen:make-stream-parser 
       especificacion-lexica
       gramatica)))
-;                                                               ----------------------------------- EVALUADORES ----------------------------------
+;  ----------------------------------- EVALUADORES ----------------------------------
 ; --------------Evaluar-programa------------------------
 ;Es el procedimiento principal, toma un arbol de sintaxis abstracta y retorna un valor.
 (define evaluar-programa
   (lambda (pgm)
     (cases programa pgm
-      (un-programa (cuerpo)
-                 (evaluar-expresion cuerpo (init-amb))))))
+      (un-programa (c-decls exp)
+                   (elaborate-class-decls! c-decls) ;\new1
+                   (and
+                   (set! lista-constantes '())
+                   (evaluar-expresion exp (init-amb))
+                   )))))
 ;------------- Evaluar-expresion -------------------------
 ;evaluar-expresion: <expresion> <ambiente> -> numero
 ;evalua la expresión en el ambiente de entrada
@@ -190,6 +226,8 @@
   (lambda (exp amb)
     (cases expresion exp
       (numero-lit (datum) datum)
+
+      (mostrar-exp () the-class-env)
       
       (id-exp (id) (apply-env amb id))
 
@@ -203,7 +241,7 @@
       (controlbin-bignum (operador rands1 rands2) (apply-prim-bin-bignum operador (get-Bignum-estruct rands1)
                                                                          rands1  rands2 amb))
 
-      (controlun-bignum (operador bignums) (apply-prim-bin-bignum operador (get-Bignum-estruct bignums) (evaluar-expresion bignums amb)))
+      (controlun-bignum (operador bignums) (apply-prim-una-bignum operador (get-Bignum-estruct bignums) (evaluar-expresion bignums amb)))
 
       (lista-exp (prim rands)
                  (let ((args (eval-rands-list rands amb)))
@@ -279,7 +317,6 @@
                   (evaluar-expresion rhs-exp amb))])
                  1
                  ))
-
       
       (begin-exp (exp exps)
                  (let loop ((acc (evaluar-expresion exp amb))
@@ -308,6 +345,26 @@
                    (when (< i downto)
                       (evaluar-expresion cuerpo (extend-amb (list ids) (list i) amb))
                       (loop (+ 1 i))))))
+      
+      (new-object-exp (class-name rands)
+        (let ((args (eval-rands rands amb))
+              (obj (new-object class-name)))
+          (find-method-and-apply
+            '$initialize class-name obj args)
+          obj))
+      
+      (method-app-exp (obj-exp method-name rands)
+        (let ((args (eval-rands rands amb))
+              (obj (evaluar-expresion obj-exp amb)))
+          (find-method-and-apply
+            method-name (object->class-name obj) obj args)))
+      
+      (super-call-exp (method-name rands)
+        (let ((args (eval-rands rands amb))
+              (obj (apply-env amb 'self)))
+          (find-method-and-apply
+            method-name (apply-env amb '%super) obj args)))
+
 
       )))
 ;-----------Eval-bool------------------
@@ -360,12 +417,12 @@
       (new-list lista n x 0))
     )
   )
-;                                                               ----------------------------------- REFERENCIAS ----------------------------------
+;             ----------------------------------- REFERENCIAS ----------------------------------
 
 ;Definición de tipos para trabajar referencias
 (define expval?
   (lambda (x)
-    (or (number? x) (procval? x) (list? x))))
+    (or (number? x) (procval? x) (list? x) (object? x))))
 
 (define ref-to-direct-target?
   (lambda (x)
@@ -388,6 +445,7 @@
 
 (define deref
   (lambda (ref)
+    (if (target? (primitive-deref ref))
     (cases target (primitive-deref ref)
       (direct-target (expval) expval)
       (indirect-target (ref1)
@@ -395,7 +453,8 @@
                          (direct-target (expval) expval)
                          (indirect-target (p)
                                           (eopl:error 'deref
-                                                      "Illegal reference: ~s" ref1)))))))
+                                                      "Illegal reference: ~s" ref1)))))
+    (primitive-deref ref))))
 
 (define primitive-deref
   (lambda (ref)
@@ -411,25 +470,17 @@
 
 (define setref!
   (lambda (ref expval)
-    (let
-        ((ref (cases target (primitive-deref ref)
+    (if (target? (primitive-deref ref))
+    (let ((ref (cases target (primitive-deref ref)
                 (direct-target (expval1) ref)
                 (indirect-target (ref1) ref1))))
-      (primitive-setref! ref (direct-target expval)))))
+      (primitive-setref! ref (direct-target expval)))
+      (primitive-setref! ref expval))))
 
-;                                                   ----------------------------------- FUNCIONES AUXILIARES EVALUADORAS ----------------------------------
+;       ----------------------------------- FUNCIONES AUXILIARES EVALUADORAS ----------------------------------
+
+
 (define eval-rands
-  (lambda (rands)
-    (cond
-      [(null? rands) #true]
-      [else
-       (cases expresion (car rands)
-                     (set-exp (id exp) (eopl:error 'evaluar-expresion
-                                 "No es posible modificar una constante" ))
-                     (else (eval-rands (cdr rands))))]
-      )))
-
-(define eval-rands-reg
   (lambda (rands amb)
     (map (lambda (x) (evaluar-expresion x amb)) rands)))
 
@@ -496,7 +547,7 @@
       (primitiva-sub1 () (- (evaluar-expresion arg amb ) 1)))))
 
 
-
+;;------------------------const-----------------------------
 ;variable para manjeo de constantes
 (define lista-constantes '())
 
@@ -508,8 +559,6 @@
       [else
        (if(eqv? (car lista) elemento) #t
           (buscar-elemento (cdr lista) elemento))])))
-
-
 
 ;----------- Bignum -----------
 ;Funcion para obtener el exponente de dato Bignum
@@ -646,8 +695,9 @@
       (vacio-prim () '())
       (car-prim () (car (car args)))
       (cdr-prim () (cdr (car args)))
-      (append-prim () (cons (car args) (cadr args)))
-      (null?-prim () (if (null? (car args)) 1 0))
+      (append-prim () (append (car args) (cadr args)))
+      (cons-prim () (cons (car args) (cons (cadr args) '())))
+      (null?-prim () (if (null? (car args)) #true #false))
       (list?-prim () (list? (car args)))
       )))
 
@@ -663,16 +713,13 @@
       (primitiva-tcola () (cdr args))
       )))
 
-
-;------------Registros------------------
-
 ;------------Registros------------------
 
 (define eval-registro
   (lambda (registro-exp amb)
     (cases prim-registro registro-exp
       [primitiva-crearRegistro (key list-exp)
-                    (list (list->vector key)(list->vector (eval-rands-reg list-exp amb)))]
+                    (list (list->vector key)(list->vector (eval-rands list-exp amb)))]
 
       [primitiva-registro? (registro) (let (( registro (evaluar-expresion registro amb)))
                   (if (list? registro)
@@ -756,23 +803,7 @@
 ;Realiza la busqueda de un símbolo en un ambiente
 ;Empleada en la evaluacion de una expresion, para encontrar una variable dada en un ambiente dado, si no se encuentra la variable, retorna un
 ;mensaje de error
-;(define buscar-variable
-;  (lambda (amb sym)
-;    (cases ambiente amb
-;      (empty-amb-record ()
-;                        (eopl:error 'apply-amb "Error, la variable no existe" sym))
-;      (extended-amb-record (syms vals amb)
-;                           (let ((pos (list-find-position sym syms)))
-;                             (if (number? pos)
-;                                 (list-ref vals pos)
-;                                 (buscar-variable amb sym))))
-;      (recursively-extended-amb-record (proc-names idss bodies old-env)
-;                                       (let ((pos (list-find-position sym proc-names)))
-;                                         (if (number? pos)
-;                                             (closure (list-ref idss pos)
-;                                                      (list-ref bodies pos)
-;                                                      amb)
-;                                             (buscar-variable old-env sym)))))))
+
 
 (define apply-env
   (lambda (env sym)
@@ -798,14 +829,285 @@
    (ids (list-of symbol?))
    (cuerpo expresion?)
    (amb ambiente?)))
+;                                      ------------------------------------- OBJETOS PLANOS ---------------------------------------
+(define-datatype class class?
+  (a-class
+    (class-name symbol?)  
+    (super-name symbol?) 
+    (field-length integer?)  
+    (field-ids (list-of symbol?))
+    (methods method-environment?)))
 
-;                                                             --------------------------------FUNCIONES AUXILIARES GENERALES ----------------------------
+; ------------------ ambiente -------------------------
+(define the-class-env '())
+
+(define initialize-class-env!
+  (lambda ()
+    (set! the-class-env '())))
+
+(define add-to-class-env!
+  (lambda (class)
+    (set! the-class-env (cons class the-class-env))))
+
+(define lookup-class                    
+  (lambda (name)
+    (let loop ((env the-class-env))
+      (cond
+        ((null? env) (eopl:error 'lookup-class
+                       "Unknown class ~s" name))
+        ((eqv? (class->class-name (car env)) name) (car env))
+        (else (loop (cdr env)))))))
+
+; construccion de clases
+(define elaborate-class-decls!
+  (lambda (c-decls)
+    (initialize-class-env!)
+    (for-each elaborate-class-decl! c-decls)))
+
+(define elaborate-class-decl!
+  (lambda (c-decl)
+    (let ((super-name (class-decl->super-name c-decl)))
+      (let ((field-ids  (append
+                          (class-name->field-ids super-name)
+                          (class-decl->field-ids c-decl))))
+        (add-to-class-env!
+          (a-class
+            (class-decl->class-name c-decl)
+            super-name
+            (length field-ids)
+            field-ids
+            (roll-up-method-decls
+              c-decl super-name field-ids)))))))
+
+(define roll-up-method-decls
+  (lambda (c-decl super-name field-ids)
+    (map
+      (lambda (m-decl)
+        (a-method m-decl super-name field-ids))
+      (class-decl->method-decls c-decl))))
+
+; objetos
+(define-datatype object object? 
+  (an-object
+    (class-name symbol?)
+    (fields vector?)))
+
+(define new-object
+  (lambda (class-name)
+    (an-object
+      class-name
+      (make-vector (class-name->field-length class-name))))) ;\new1
+
+; Metodos
+(define-datatype method method?
+  (a-method
+    (method-decl method-decl?)
+    (super-name symbol?)
+    (field-ids (list-of symbol?))))
+
+(define find-method-and-apply
+  (lambda (m-name host-name self args)
+    (let loop ((host-name host-name))
+      (if (eqv? host-name '$object)
+          (eopl:error 'find-method-and-apply
+            "No method for name ~s" m-name)
+          (let ((method (lookup-method m-name ;^ m-decl -> method
+                          (class-name->methods host-name))))
+            (if (method? method)
+                (apply-method method host-name self args)
+                (loop (class-name->super-name host-name))))))))
+
+(define apply-method
+  (lambda (method host-name self args)                ;\new5
+    (let ((ids (method->ids method))
+          (body (method->body method))
+          (super-name (method->super-name method))
+          (field-ids (method->field-ids method))       
+          (fields (object->fields self)))
+      (evaluar-expresion body
+        (extend-amb
+          (cons '%super (cons 'self ids))
+          (cons super-name (cons self args))
+          (extend-env-refs field-ids fields (empty-amb)))))))
+
+; ----------- ambiente de metodos ----
+(define method-environment? (list-of method?)) 
+
+(define lookup-method                   
+  (lambda (m-name methods)
+    (cond
+      ((null? methods) #f)
+      ((eqv? m-name (method->method-name (car methods)))
+       (car methods))
+      (else (lookup-method m-name (cdr methods))))))
+
+(define extend-env-refs
+  (lambda (syms vec env)
+    (extended-amb-record syms vec env)))
+
+(define list-find-last-position
+  (lambda (sym los)
+    (let loop
+      ((los los) (curpos 0) (lastpos #f))
+      (cond
+        ((null? los) lastpos)
+        ((eqv? sym (car los))
+         (loop (cdr los) (+ curpos 1) curpos))
+        (else (loop (cdr los) (+ curpos 1) lastpos))))))
+
+;-------------------- declaraciones ---------------
+(define class-decl->class-name
+  (lambda (c-decl)
+    (cases class-decl c-decl
+      (a-class-decl (class-name super-name field-ids m-decls)
+        class-name))))
+
+(define class-decl->super-name
+  (lambda (c-decl)
+    (cases class-decl c-decl
+      (a-class-decl (class-name super-name field-ids m-decls)
+        super-name))))
+
+(define class-decl->field-ids
+  (lambda (c-decl)
+    (cases class-decl c-decl
+      (a-class-decl (class-name super-name field-ids m-decls)
+        field-ids))))
+
+(define class-decl->method-decls
+  (lambda (c-decl)
+    (cases class-decl c-decl
+      (a-class-decl (class-name super-name field-ids m-decls)
+        m-decls))))
+
+(define method-decl->method-name
+  (lambda (md)
+    (cases method-decl md
+      (a-method-decl (method-name ids body) method-name))))
+
+(define method-decl->ids
+  (lambda (md)
+    (cases method-decl md
+      (a-method-decl (method-name ids body) ids))))
+
+(define method-decl->body
+  (lambda (md)
+    (cases method-decl md
+      (a-method-decl (method-name ids body) body))))
+
+(define method-decls->method-names
+  (lambda (mds)
+    (map method-decl->method-name mds)))
+
+; ------------------- selectores ------------------
+(define class->class-name
+  (lambda (c-struct)
+    (cases class c-struct
+      (a-class (class-name super-name field-length field-ids methods)
+        class-name))))
+
+(define class->super-name
+  (lambda (c-struct)
+    (cases class c-struct
+      (a-class (class-name super-name field-length field-ids methods)
+        super-name))))
+
+(define class->field-length
+  (lambda (c-struct)
+    (cases class c-struct
+      (a-class (class-name super-name field-length field-ids methods)
+        field-length))))
+
+(define class->field-ids
+  (lambda (c-struct)
+    (cases class c-struct
+      (a-class (class-name super-name field-length field-ids methods)
+        field-ids))))
+
+(define class->methods
+  (lambda (c-struct)
+    (cases class c-struct
+      (a-class (class-name super-name field-length field-ids methods)
+        methods))))
+
+(define object->class-name
+  (lambda (obj)
+    (cases object obj
+      (an-object (class-name fields)
+        class-name))))
+
+(define object->fields
+  (lambda (obj)
+    (cases object obj
+      (an-object (class-decl fields)
+        fields))))
+
+(define object->class-decl
+  (lambda (obj)
+    (lookup-class (object->class-name obj))))
+
+(define object->field-ids
+  (lambda (object)
+    (class->field-ids
+      (object->class-decl object))))
+
+(define class-name->super-name
+  (lambda (class-name)
+    (class->super-name (lookup-class class-name))))
+
+(define class-name->field-ids
+  (lambda (class-name)
+    (if (eqv? class-name '$object) '()
+      (class->field-ids (lookup-class class-name)))))
+
+(define class-name->methods
+  (lambda (class-name)
+    (if (eqv? class-name '$object) '()
+      (class->methods (lookup-class class-name)))))
+
+(define class-name->field-length
+  (lambda (class-name)
+    (if (eqv? class-name '$object)
+        0
+        (class->field-length (lookup-class class-name)))))
+
+(define method->method-decl
+  (lambda (meth)
+    (cases method meth
+      (a-method (meth-decl super-name field-ids) meth-decl))))
+
+(define method->super-name
+  (lambda (meth)
+    (cases method meth
+      (a-method (meth-decl super-name field-ids) super-name))))
+
+(define method->field-ids
+  (lambda (meth)
+    (cases method meth
+      (a-method (method-decl super-name field-ids) field-ids))))
+
+(define method->method-name
+  (lambda (method)
+    (method-decl->method-name (method->method-decl method))))
+
+(define method->body
+  (lambda (method)
+    (method-decl->body (method->method-decl method))))
+
+(define method->ids
+  (lambda (method)
+    (method-decl->ids (method->method-decl method))))
+
+
+
+;                                      --------------------------------FUNCIONES AUXILIARES GENERALES ----------------------------
 
 ;funciones auxiliares para encontrar la posición de un símbolo en la lista de símbolos de un ambiente
 
 (define rib-find-position 
   (lambda (sym los)
-    (list-find-position sym los)))
+    (list-find-last-position sym los)))
+
 
 ;Realiza una busqueda de la posicion de un simbolo
 ;Empleada para la búsqueda de una variable en funciones usadas en el lenguaje
@@ -843,3 +1145,5 @@
       (if (>= next end) '()
         (cons next (loop (+ 1 next)))))))
 
+
+(interpretador)
