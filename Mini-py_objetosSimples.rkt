@@ -46,7 +46,7 @@
   (expresion ("if" expresion "then" expresion "[" "else" expresion "]" "end") condicional-exp)
   (expresion ("def" "(" (separated-list identificador ",") ")" "{" expresion "}") proc-exp)
   (expresion ("eval" expresion "[" (separated-list expresion ",") "]") app-exp)
-  (expresion ("def-rec" (arbno identificador "(" (separated-list identificador ",") ")" "=" expresion)  "in" expresion) defrec-exp)
+  (expresion ("def-rec" (separated-list identificador "(" (separated-list identificador ",") ")" "=" expresion ",")  "in" expresion) defrec-exp)
   (expresion ("while" boolean  "do" expresion "done") while-exp)
   (expresion ("for" identificador "=" expresion "to"  expresion "do" expresion "done") for-exp)
   
@@ -110,6 +110,7 @@
   (prim-lista ("cola")  cdr-prim)
   (prim-lista ("vacio?") null?-prim)
   (prim-lista ("lista?") list?-prim)
+  (prim-lista ("tamano") tamano-prim)
 
   ;Primitiva tuplas 
   (primitiv-tupla ("crear-tupla") primitiva-crear-tupla)
@@ -708,6 +709,7 @@
       (cons-prim () (cons (car args) (cons (cadr args) '())))
       (null?-prim () (if (null? (car args)) #true #false))
       (list?-prim () (list? (car args)))
+      (tamano-prim () (length (car args)))
       )))
 
 ;-------------- Tuplas ---------------
