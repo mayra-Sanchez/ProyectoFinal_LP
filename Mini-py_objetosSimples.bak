@@ -35,7 +35,6 @@
   (expresion ("\"" texto "\"") texto-lit)
   (expresion (printf) printf-exp)
   (printf ("printf" "(" expresion ")") printf-def)
-  (expresion ("printObj" "(" expresion ")") printPbj-exp)
   (expresion (identificador) id-exp)
   (expresion (boolean) expr-bool)
   (expresion (crea-bignum "(" (arbno numero) ")") bignum-exp)
@@ -372,8 +371,6 @@
               (obj (apply-env amb '$self)))
           (find-method-and-apply
             method-name (apply-env amb '%super) obj args)))
-
-      (printPbj-exp (obj) (print-objeto (evaluar-expresion obj amb)))
 
       )))
 ;-----------Eval-bool------------------
@@ -836,20 +833,6 @@
    (cuerpo expresion?)
    (amb ambiente?)))
 ;                                      ------------------------------------- OBJETOS SIMPLES ---------------------------------------
-
-(define print-objeto
-  (lambda (value)
-    (map
-     (lambda (x)
-       (cases part x
-         (a-part (class-name fields) fields)
-        ) 
-     )
-       value )
-    
-   )
-)
-
 
 
 ;; evaluar
