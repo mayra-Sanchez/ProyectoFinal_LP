@@ -368,7 +368,7 @@
       
       (super-call-exp (method-name rands)
         (let ((args (eval-rands rands amb))
-              (obj (apply-env amb 'self)))
+              (obj (apply-env amb '$self)))
           (find-method-and-apply
             method-name (apply-env amb '%super) obj args)))
 
@@ -922,7 +922,7 @@
           (fields (object->fields self)))
       (evaluar-expresion body
         (extend-amb
-          (cons '%super (cons 'self ids))
+          (cons '%super (cons '$self ids))
           (cons super-name (cons self args))
           (extend-env-refs field-ids fields (empty-amb)))))))
 
