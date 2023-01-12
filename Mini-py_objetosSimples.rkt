@@ -32,6 +32,7 @@
   ;Expresiones
   (expresion (numero) numero-lit)
   (expresion ("mostrar") mostrar-exp)
+  (expresion (letter) letter-lit)
   (expresion ("\"" texto "\"") texto-lit)
   (expresion (printf) printf-exp)
   (printf ("printf" "(" expresion ")") printf-def)
@@ -234,6 +235,8 @@
       
       (id-exp (id) (apply-env amb id))
 
+      (letter-lit (letra) letra)
+
       (texto-lit (texto) texto)
 
       (printf-exp (message) (eval-printf message amb))
@@ -350,7 +353,7 @@
              ((de (evaluar-expresion desde amb))
                    (to (evaluar-expresion hasta amb)))
            (let   loop ((i de))
-              (when (< i to)
+              (when (<= i to)
                       (evaluar-expresion cuerpo (extend-amb (list exp) (list i) amb))
                       (loop (+ 1 i))))))
       
@@ -505,14 +508,15 @@
 (define eval-exp
   (lambda (rand env)
     (cases expresion rand
-      (id-exp (id)
+      (lista-exp (prim id)
                (indirect-target
                 (let ((ref (apply-env-ref env id)))
                   (cases target (primitive-deref ref)
                     (direct-target (expval) ref)
                     (indirect-target (ref1) ref1)))))
       (else
-       (direct-target (evaluar-expresion rand env))))))
+       (direct-target (evaluar-expresion rand env)))))
+  )
 
 (define eval-primapp-exp-rands
   (lambda (rands env)
